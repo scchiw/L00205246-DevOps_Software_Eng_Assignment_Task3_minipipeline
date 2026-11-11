@@ -1,0 +1,40 @@
+name: DevOps Mini-Pipeline
+
+# Trigger automatically on every push or pull request
+on:
+  push:
+    branches: [ "main", "feature/pipeline-setup" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-test-security-container:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Stage 1: Source Code Checkout
+      - name: Checkout Repository Code
+        uses: actions/checkout@v4
+
+      # Stage 2: Automated Testing (HTML Structure Validation)
+      - name: Run HTMLHint Linter Test
+        run: |
+          npm install -g htmlhint
+          npx htmlhint index.html
+
+      # Stage 3: Static Analysis & Security Scanning
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      # Stage 4: Containerisation (Build & Validate Docker Image)
+      - name: Build and Test Docker Container
+        run: |
+          docker build -t atu-support-app:latest .
+          docker run -d -p 8080:80 --name test-container atu-support-app:latest
+          sleep 5
+          curl --fail http://localhost:8080 || exit 1
+          echo "Container built and verified successfully!"

@@ -1,14 +1,14 @@
-name: DevOps Mini-Pipeline
+name: DevOps End-to-End CI/CD Pipeline
 
-# Trigger automatically on every push or pull request
 on:
   push:
-    branches: [ "main", "feature/pipeline-setup" ]
+    branches: [ "main", "feature/aws-monitoring-upgrade" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
-  build-test-security-container:
+  ci-build-test-scan:
+    name: CI - Test, Security Scan & Container Build
     runs-on: ubuntu-latest
 
     steps:
@@ -16,25 +16,68 @@ jobs:
       - name: Checkout Repository Code
         uses: actions/checkout@v4
 
-      # Stage 2: Automated Testing (HTML Structure Validation)
-      - name: Run HTMLHint Linter Test
+      # Stage 2: Automated Unit/Lint Testing
+      - name: Run HTMLHint Structure Test
         run: |
           npm install -g htmlhint
           npx htmlhint index.html
 
-      # Stage 3: Static Analysis & Security Scanning
-      - name: Run Trivy Vulnerability Scanner
+      # Stage 3a: Static Filesystem & IaC Security Scan
+      - name: Run Trivy Filesystem Security Scan
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
 
-      # Stage 4: Containerisation (Build & Validate Docker Image)
-      - name: Build and Test Docker Container
+      # Stage 4: Containerisation & Integration Test
+      - name: Build Docker Image & Run Integration Check
         run: |
           docker build -t atu-support-app:latest .
           docker run -d -p 8080:80 --name test-container atu-support-app:latest
           sleep 5
           curl --fail http://localhost:8080 || exit 1
-          echo "Container built and verified successfully!"
+          docker stop test-container
+
+      # Stage 3b: Container Image Vulnerability Scan
+      - name: Run Trivy Docker Image Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'atu-support-app:latest'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+  cd-deploy-aws:
+    name: CD - Deploy Stack & Monitoring to AWS EC2
+    needs: ci-build-test-scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository Code
+        uses: actions/checkout@v4
+
+      # Stage 5a: Transfer Application & IaC Files to AWS EC2
+      - name: Copy Project Files to AWS EC2 via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "index.html,Dockerfile,docker-compose.yml,prometheus.yml,setup-server.sh"
+          target: "/home/ubuntu/atu-devops-app"
+
+      # Stage 5b & 6: Provision Server (IaC) & Launch Web + Monitoring Stack
+      - name: Provision Server & Deploy Containers via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/atu-devops-app
+            chmod +x setup-server.sh
+            ./setup-server.sh
+            sudo docker compose down || true
+            sudo docker compose up -d --build

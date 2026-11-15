@@ -1,0 +1,23 @@
+{
+  "uid": "atu-devops-monitoring",
+  "title": "ATU DevOps Monitoring",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Prometheus HTTP Requests Total",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "prometheus_http_requests_total",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

@@ -65,7 +65,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "index.html,Dockerfile,docker-compose.yml,prometheus.yml,setup-server.sh"
+          source: "index.html,Dockerfile,docker-compose.yml,prometheus.yml,setup-server.sh,grafana"
           target: "/home/ubuntu/atu-devops-app"
 
       # Stage 5b & 6: Provision Server (IaC) & Launch Web + Monitoring Stack

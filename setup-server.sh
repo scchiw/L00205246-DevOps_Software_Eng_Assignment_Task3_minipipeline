@@ -1,5 +1,5 @@
 #!/bin/bash
-# Infrastructure-as-Code (IaC) idempotent setup script for Ubuntu AWS EC2
+# Infrastructure-as-Code (IaC) repeatable setup script for Ubuntu AWS EC2
 set -e
 
 if ! command -v docker &> /dev/null; then

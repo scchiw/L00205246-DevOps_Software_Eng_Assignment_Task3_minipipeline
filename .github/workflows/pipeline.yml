@@ -2,7 +2,7 @@ name: DevOps End-to-End CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main", "feature/aws-monitoring-upgrade" ]
+    branches: [ "main", "feature/**" ]
   pull_request:
     branches: [ "main" ]
 
